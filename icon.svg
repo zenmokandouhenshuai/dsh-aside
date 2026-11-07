@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect x="4" y="10" width="42" height="34" rx="10" fill="#2ea88a"/>
+  <path d="M14 44 L12 56 L26 44 Z" fill="#2ea88a"/>
+  <text x="25" y="35" font-family="Segoe UI, Arial, sans-serif" font-size="24"
+        font-weight="700" fill="#ffffff" text-anchor="middle">?</text>
+  <circle cx="52" cy="16" r="9" fill="#1b6f5b"/>
+  <text x="52" y="20" font-family="Segoe UI, Arial, sans-serif" font-size="11"
+        font-weight="700" fill="#bfeee2" text-anchor="middle">A</text>
+</svg>

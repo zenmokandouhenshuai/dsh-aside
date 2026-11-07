@@ -1,0 +1,44 @@
+{
+  "name": "@local/dsh-aside",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Ask a quick side question about one term without touching the main conversation.",
+  "author": "zenmokandouhenshuai",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zenmokandouhenshuai/dsh-aside.git"
+  },
+  "homepage": "https://github.com/zenmokandouhenshuai/dsh-aside#readme",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "terminology",
+    "glossary"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": ["@deepseek-ai/dsh-client-ui-conversation"]
+    }
+  }
+}

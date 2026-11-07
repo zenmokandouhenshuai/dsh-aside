@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-aside
+      name: '@local/dsh-aside'
