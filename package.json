@@ -1,9 +1,9 @@
 {
   "name": "@local/dsh-aside",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "Ask a quick side question about one term without touching the main conversation.",
+  "description": "Ask a quick side question about one term without touching the main conversation, with a configurable field premise.",
   "author": "zenmokandouhenshuai",
   "license": "MIT",
   "repository": {

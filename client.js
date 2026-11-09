@@ -32,6 +32,7 @@ window.__ModuleLoader__.load({
       items: [],
       loaded: false,
       route: null,
+      domain: '',
       query: '',
       switching: false,
     }
@@ -62,6 +63,7 @@ window.__ModuleLoader__.load({
         patch({
           items: Array.isArray(data.items) ? data.items : [],
           route: data.route || null,
+          domain: typeof data.domain === 'string' ? data.domain : store.domain,
           loaded: true,
         })
       } catch (err) {
@@ -83,6 +85,23 @@ window.__ModuleLoader__.load({
         patch({ switching: false, route: data.route })
       } catch (err) {
         patch({ switching: false, error: '切换路由失败：' + String((err && err.message) || err) })
+      }
+    }
+
+    async function saveDomain(domain) {
+      const next = String(domain || '').trim().slice(0, 120)
+      patch({ domain: next, error: '' })
+      try {
+        const res = await fetch(ENDPOINT + '/domain', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          body: JSON.stringify({ domain: next }),
+        })
+        const data = await res.json()
+        if (!data || data.ok !== true) throw new Error((data && data.error) || ('HTTP ' + res.status))
+        patch({ domain: String(data.domain || '') })
+      } catch (err) {
+        patch({ error: '领域没保存上：' + String((err && err.message) || err) })
       }
     }
 
@@ -185,6 +204,16 @@ window.__ModuleLoader__.load({
       color: active ? T.accent : T.dim,
     })
 
+    // 卡片里的滚动条默认是「悬停才出现」的浮层样式，长答案常常看不到还能滚。
+    // 这里给滚动容器加一条常驻的细滑轨。
+    const SCROLL_CSS = [
+      '.dsh-aside-scroll{scrollbar-width:thin;scrollbar-color:' + T.line + ' transparent;overscroll-behavior:contain;}',
+      '.dsh-aside-scroll::-webkit-scrollbar{width:9px;height:9px;}',
+      '.dsh-aside-scroll::-webkit-scrollbar-track{background:transparent;}',
+      '.dsh-aside-scroll::-webkit-scrollbar-thumb{background:' + T.line + ';border-radius:5px;border:2px solid transparent;background-clip:content-box;}',
+      '.dsh-aside-scroll::-webkit-scrollbar-thumb:hover{background:' + T.faint + ';background-clip:content-box;}',
+    ].join('')
+
     const S = {
       button: {
         display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -202,7 +231,7 @@ window.__ModuleLoader__.load({
       },
       layer: {
         position: 'fixed', right: 26, bottom: 128, width: 468,
-        maxHeight: '62vh', display: 'flex', flexDirection: 'column',
+        maxHeight: '72vh', display: 'flex', flexDirection: 'column',
         background: T.card, color: T.ink,
         border: '1px solid ' + T.line, borderRadius: 14,
         boxShadow: '0 18px 48px rgba(0,0,0,.42)',
@@ -211,8 +240,11 @@ window.__ModuleLoader__.load({
       head: {
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '12px 14px 10px', borderBottom: '1px solid ' + T.line,
+        flex: 'none',
       },
-      body: { padding: '12px 14px', overflowY: 'auto' },
+      // minHeight:0 是关键：flex 子项默认不肯缩到内容以下，少了它 overflow 不生效，
+      // 超出部分会被卡片直接裁掉，而不是出一根滑轨。
+      body: { padding: '12px 14px', overflowY: 'auto', flex: '1 1 auto', minHeight: 0 },
       field: {
         width: '100%', boxSizing: 'border-box', resize: 'vertical',
         minHeight: 54, maxHeight: 160, padding: '9px 10px',
@@ -227,6 +259,7 @@ window.__ModuleLoader__.load({
       answer: {
         marginTop: 10, padding: '10px 12px', borderRadius: 10,
         background: T.field, lineHeight: 1.62, whiteSpace: 'pre-wrap',
+        maxHeight: '34vh', overflowY: 'auto', overscrollBehavior: 'contain',
       },
       row: {
         display: 'flex', alignItems: 'flex-start', gap: 10,
@@ -241,6 +274,15 @@ window.__ModuleLoader__.load({
       link: {
         border: 0, background: 'none', color: T.faint, cursor: 'pointer',
         font: 'inherit', fontSize: 12, padding: 0,
+      },
+      domainBtn: {
+        border: 0, background: 'none', color: T.dim, font: 'inherit',
+        fontSize: 12, padding: 0, cursor: 'pointer', textAlign: 'left',
+      },
+      domainInput: {
+        width: '100%', boxSizing: 'border-box', height: 27, padding: '0 9px',
+        borderRadius: 7, border: '1px solid ' + T.accent, background: T.field,
+        color: T.ink, font: 'inherit', fontSize: 12.5, outline: 'none',
       },
       page: { height: '100%', overflowY: 'auto' },
       pageInner: { maxWidth: 1000, margin: '0 auto', padding: '26px 30px 60px' },
@@ -306,6 +348,50 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function DomainField() {
+      const [editing, setEditing] = useState(false)
+      const [value, setValue] = useState('')
+      const domain = String(store.domain || '')
+
+      if (editing) {
+        const commit = () => {
+          if (!editing) return
+          setEditing(false)
+          if (value.trim() !== domain) void saveDomain(value)
+        }
+        return h('input', {
+          autoFocus: true,
+          value,
+          placeholder: '比如：钠离子固态电池、电池材料、电化学储能',
+          style: S.domainInput,
+          onChange: (event) => setValue(event.target.value),
+          onKeyDown: (event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              commit()
+            }
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              setEditing(false)
+            }
+          },
+          onBlur: commit,
+        })
+      }
+
+      return h('button', {
+        type: 'button',
+        style: S.domainBtn,
+        title: '同一个词在不同领域含义不同。设置领域后，解释会按这个领域给。',
+        onClick: () => {
+          setValue(domain)
+          setEditing(true)
+        },
+      }, domain
+        ? '领域：' + domain + '　（点击修改）'
+        : '领域：未设置 · 按通用含义解释（点击设置）')
+    }
+
     function AsideButton(props) {
       useAside()
       return h('button', {
@@ -343,6 +429,7 @@ window.__ModuleLoader__.load({
       }
 
       return h('div', { style: S.layer, role: 'dialog', 'aria-label': '旁问' },
+        h('style', null, SCROLL_CSS),
         h('div', { style: S.head },
           h('span', {
             style: {
@@ -359,15 +446,17 @@ window.__ModuleLoader__.load({
           }, 'Esc 关闭'),
         ),
 
-        h('div', { style: S.body },
+        h('div', { className: 'dsh-aside-scroll', style: S.body },
           store.route
-            ? h('div', { style: { marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 } },
+            ? h('div', { style: { marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 } },
                 h(RouteSwitch),
                 h('span', { style: { flex: 1 } }),
                 h('span', { style: { color: T.faint, fontSize: 11 } },
                   store.route.provider + ' / ' + store.route.model),
               )
             : null,
+
+          h('div', { style: { marginBottom: 8 } }, h(DomainField)),
 
           store.context
             ? h('div', {
@@ -406,7 +495,7 @@ window.__ModuleLoader__.load({
           ),
 
           store.error ? h('div', { style: { marginTop: 10, color: T.danger, fontSize: 13, lineHeight: 1.6 } }, store.error) : null,
-          store.answer ? h('div', { style: S.answer }, store.answer) : null,
+          store.answer ? h('div', { className: 'dsh-aside-scroll', style: S.answer }, store.answer) : null,
 
           store.items.length
             ? h('div', { style: { marginTop: 16 } },
@@ -474,6 +563,8 @@ window.__ModuleLoader__.load({
           h('div', { style: { marginTop: 6, color: T.faint, fontSize: 12 } },
             (store.route ? store.route.provider + ' / ' + store.route.model : '路由未知')
             + '　·　都存在 ' + '~/.dsh/dsh-aside/　·　检索在本地做，不花 token'),
+
+          h('div', { style: { marginTop: 8 } }, h(DomainField)),
 
           h('div', { style: { marginTop: 18 } },
             h('input', {
